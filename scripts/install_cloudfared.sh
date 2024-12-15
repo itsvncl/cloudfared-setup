@@ -103,7 +103,7 @@ update_env_file() {
 
   # Update the .env file with the provided token
   echo "Updating the .env file with the provided token..."
-  sed -i "s/^CLOUDFLARE_TOKEN=.*/CLOUDFARE_TOKEN=\"$TUNNEL_TOKEN\"/" "$ENV_FILE"
+  sed -i "s/^CLOUDFLARE_TOKEN=.*/CLOUDFLARE_TOKEN=\"$TUNNEL_TOKEN\"/" "$ENV_FILE"
 
   if [ $? -ne 0 ]; then
     echo "Error: Failed to update .env file."
