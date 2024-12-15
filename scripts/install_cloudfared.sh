@@ -2,8 +2,8 @@
 
 # Constants
 CLOUDFLARED_DIR="/etc/cloudflared"
-ENV_FILE_DOWNLOAD="https://raw.githubusercontent.com/itsvncl/cloudfared-setup/main/cloudfared/.env"
-DOCKER_COMPOSE_FILE_DOWNLOAD="https://raw.githubusercontent.com/itsvncl/cloudfared-setup/main/cloudfared/docker-compose.yml"
+ENV_FILE_DOWNLOAD="https://raw.githubusercontent.com/itsvncl/cloudflared-setup/main/cloudfared/.env"
+DOCKER_COMPOSE_FILE_DOWNLOAD="https://raw.githubusercontent.com/itsvncl/cloudflared-setup/main/cloudfared/docker-compose.yml"
 ENV_FILE="$CLOUDFLARED_DIR/.env"
 
 # Check if the script is run with root privileges
