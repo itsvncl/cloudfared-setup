@@ -12,17 +12,57 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+install_tools() {
+    echo "Installing required tools for automatic setup."
+    apt-get update -y
+    apt-get install ca-certificates curl sudo systemd -y
+}   
+
 # Function to check if Docker is installed, and install it if not
 install_docker() {
   if ! command -v docker &> /dev/null; then
     echo "Docker is not installed. Installing Docker..."
-    apt update
-    apt install -y docker.io docker-compose-plugin
-    systemctl start docker
-    systemctl enable docker
-    echo "Docker installed successfully."
+    
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+    
+    # Add the repository to Apt sources:
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt-get update -y
+
+    apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
   else
     echo "Docker is already installed."
+  fi
+}
+
+# Function to start Docker if not running
+start_docker() {
+  echo "Checking if Docker is running..."
+  
+  # Start Docker if it's not running
+  sudo systemctl is-active --quiet docker || {
+    echo "Starting Docker..."
+    sudo systemctl start docker
+  }
+
+  sudo systemctl enable docker
+}
+
+# Function to check Docker permissions
+check_docker_permissions() {
+  echo "Checking Docker permissions..."
+  
+  # Add the current user to the docker group if not already a member
+  if ! groups $(whoami) | grep -q -w docker; then
+    echo "Adding current user to the docker group..."
+    sudo usermod -aG docker $(whoami)
+    echo "You must log out and log back in to complete permission setup."
+    exit 1
   fi
 }
 
@@ -63,7 +103,7 @@ update_env_file() {
 
   # Update the .env file with the provided token
   echo "Updating the .env file with the provided token..."
-  sed -i "s/^CLOUDFARE_TOKEN=.*/CLOUDFARE_TOKEN=\"$TUNNEL_TOKEN\"/" "$ENV_FILE"
+  sed -i "s/^CLOUDFLARE_TOKEN=.*/CLOUDFARE_TOKEN=\"$TUNNEL_TOKEN\"/" "$ENV_FILE"
 
   if [ $? -ne 0 ]; then
     echo "Error: Failed to update .env file."
@@ -73,12 +113,12 @@ update_env_file() {
   echo ".env file updated successfully."
 }
 
-# Function to download the docker-compose.yml file and replace the token placeholder
+# Function to download the docker-compose.yml file
 download_compose_file() {
   echo "Downloading docker-compose.yml from GitHub repo..."
 
   # Download the docker-compose.yml file
-  curl -o "$CLOUDFLARED_DIR/docker-compose.yml" "https://raw.githubusercontent.com/itsvncl/cloudfared-setup/main/cloudfared/docker-compose.yml"
+  curl -o "$CLOUDFLARED_DIR/docker-compose.yml" "$DOCKER_COMPOSE_FILE_DOWNLOAD"
 
   if [ $? -ne 0 ]; then
     echo "Error: Failed to download docker-compose.yml from GitHub."
@@ -92,8 +132,8 @@ download_compose_file() {
 start_with_compose() {
   echo "Starting the Cloudflare Tunnel using docker-compose..."
 
-  # Use docker-compose to start the container with the updated .env file
-  docker-compose --env-file "$ENV_FILE" -f "$CLOUDFLARED_DIR/docker-compose.yml" up -d
+  # Use docker compose with the updated .env file
+  sudo docker compose --env-file "$ENV_FILE" -f "$CLOUDFLARED_DIR/docker-compose.yml" up -d
 
   if [ $? -eq 0 ]; then
     echo "Cloudflare Tunnel setup complete! The container is running."
@@ -104,7 +144,10 @@ start_with_compose() {
 }
 
 # Main script execution
+install_tools
 install_docker
+start_docker
+#check_docker_permissions
 create_cloudfared_folder_and_download_env
 update_env_file
 download_compose_file
