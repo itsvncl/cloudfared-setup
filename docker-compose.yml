@@ -1,0 +1,8 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    environment:
+      - CF_TUNNEL_TOKEN=${CLOUDFLARE_TOKEN} # Use value from the .env file
+    command: tunnel --no-autoupdate run --token "${CF_TUNNEL_TOKEN}"
